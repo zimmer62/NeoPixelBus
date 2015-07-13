@@ -4,9 +4,13 @@
 
 Arduino NeoPixel library
 
+CAUTION:  This branch is experimental, and only works for esp8266.  Further, it requires 160mhz overclocking to even start to function.
+
 NOW SUPPORTS esp8266!
 
 NEW Animation class provides more flexible animation definitions
+
+NEW NeoPixelMultiBus manager exposes the ability to udpate more than one bus at a time, saving time spent on refreshing the pixels.
 
 Clone this into your Arduino\Library folder
 
@@ -32,6 +36,8 @@ It should now show up in the import list.
 this is simple example that sets four neopixels to red, green, blue, and then white in order; and then flashes them.  If the first pixel is green and the second is red, you need to pass the NEO_RGB flag into the NeoPixelBus constructor.
 ### NeoPixelFun
 this is a more complex example, that includes code for three effects, and demonstrates animations.
+### NeoPixelMultiBus
+this sample demonstrates the new multibus manager.  It will update multiple NeoPixelBus at the same time.
 
 ## API Documentation
 
@@ -130,7 +136,7 @@ returns if there are changes that need to be shown
 this will mark the current state as dirty so that Show() will think the pixel colors have changed.  This is useful when you modify the biffer directly.
 
 #### void ResetDirty()
-this will mark the current state as not dirty so that Show() will thing the pixels have the current colors.
+this will mark the current state as not dirty so that Show() will think the pixels have the current colors.
 
 #### uint8_t* Pixels() const
 this will return the underlying buffer used to store the current pixel colors in its native format.  This is usefull for advanced effets that would be slower by using GetPixelColor and SetPixelColor.
@@ -172,4 +178,27 @@ this method will resume all animations, thus continuing all animations where the
 #### void FadeTo(uint16_t time, RgbColor color)
 this will setup an animation for all pixels to linear fade between the current color and the given color over the time given.  The time is in milliseconds.
 
+### NeoPixelMultiBus object
+This manages the show for a multiple NeoPixelBus.  
+NOTE:  NeoPixelBus::Show() should not be called anymore, it is replaced by NeoPixelMultiBus::ShowAll()
 
+#### NeoPixelMultiBus(uint8_t size)
+construct a multibus manager, giving it the maximum number of buses it can manage
+
+#### void AddBus(NeoPixelBus* pBus)
+this will connect a NeoPixelBus to this multi bus manager so that the ShowAll will update its pixels.
+
+#### void ShowAll()
+this will attempt to update the connected pixels across all buses with the current state.
+
+#### bool CanShow() const
+this will return that enough time has passed since the last show that another show can be made.  The show will block by calling delay(0) until this is true.
+
+#### bool IsDirty(uint16_t n) const
+returns if there are changes that need to be shown from any connected NeoPixelBus
+
+#### void Dirty()
+this will mark the current state as dirty so that ShowAll() will think the pixel colors have changed.  This is useful when you modify the biffer directly.
+
+#### void ResetDirty()
+this will mark the current state as not dirty so that ShowAll() will think the pixels have the current colors.
