@@ -37,41 +37,16 @@ public:
         return (micros() - _endTime) >= 50L;
     }
 
-    bool IsDirty() const
-    {
-        bool isDirty = false;
-        for (uint8_t indexBus = 0; indexBus < _count; indexBus++)
-        {
-            if (_buses[indexBus].IsDirty())
-            {
-                isDirty = true;
-                break;
-            }
-        }
-        return isDirty;
-    };
+    bool IsDirty() const;
 
-    void Dirty()
-    {
-        if (_count > 0)
-        {
-            // just set the first one, thats all thats needed
-            _buses[0].Dirty();
-        }
-    };
+    void Dirty();
 
-    void ResetDirty()
-    {
-        for (uint8_t indexBus = 0; indexBus < _count; indexBus++)
-        {
-            _buses[indexBus].ResetDirty();
-        }
-    }
+    void ResetDirty();
 
 private:
     uint32_t _endTime;       // Latch timing reference
 
-    NeoPixelBus* _buses;
+    NeoPixelBus** _buses;
     uint8_t _count;
     uint8_t _size;
 };

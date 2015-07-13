@@ -20,14 +20,14 @@ License along with NeoPixel.  If not, see
 <http://www.gnu.org/licenses/>.
 -------------------------------------------------------------------------*/
 
-#include "NeoPixelMultiBus.h"
+#include "NeoPixelBus.h"
 
 
 NeoPixelMultiBus::NeoPixelMultiBus(uint8_t size) :
     _size(size),
-    _count(0),
+    _count(0)
 {
-    _buses = new (NeoPixelBus*)[size];
+    _buses = new NeoPixelBus*[size];
     if (_buses)
     {
         memset(_buses, 0, sizeof(_buses));
@@ -49,7 +49,7 @@ void NeoPixelMultiBus::AddBus(NeoPixelBus* pBus)
     }
 }
 
-void NeoPixelMultiBus::ShowAll();
+void NeoPixelMultiBus::ShowAll()
 {
     if (!IsDirty())
         return;
@@ -65,13 +65,13 @@ void NeoPixelMultiBus::ShowAll();
         delay(0); // allows for system yield if needed
     }
 
-    PixelBusInfo busInfos[count];
-    for (NeoPixelBus* pBus = _buses, uint8_t indexBus = 0; indexBus < count; indexBus++, pBus++)
+    PixelBusInfo busInfos[_count];
+    for (uint8_t indexBus = 0; indexBus < _count; indexBus++)
     {
-        busInfos[indexBus].Init(pBus->Pixels(),
-            pBus->Pixels(),
-            pBus->Pixels() + pBus->PixelSize(),
-            pBus->Pin());
+        NeoPixelBus* pBus = _buses[indexBus];
+        busInfos[indexBus]._pixels = pBus->Pixels();
+        busInfos[indexBus]._end = pBus->Pixels() + pBus->PixelSize();
+        busInfos[indexBus]._pinRegister = _BV(pBus->Pin());
     }
 
 
@@ -79,16 +79,46 @@ void NeoPixelMultiBus::ShowAll();
 
 #if defined(ESP8266)
     // 800 KHz bitstream, 400 KHz will not be supported
-    send_multibus_pixels_800(busInfos, count);
+    send_multibus_pixels_800(busInfos, _count);
 #endif
 
     interrupts();
 
-    for (uint8_t indexBus = 0; indexBus < count; indexBus++)
+    for (uint8_t indexBus = 0; indexBus < _count; indexBus++)
     {
-        buses[indexBus].ResetDirty();
+        _buses[indexBus]->ResetDirty();
     }
 
     _endTime = micros(); // Save EOD time for latch on next call
 }
 
+bool NeoPixelMultiBus::IsDirty() const
+{
+    bool isDirty = false;
+    for (uint8_t indexBus = 0; indexBus < _count; indexBus++)
+    {
+        if (_buses[indexBus]->IsDirty())
+        {
+            isDirty = true;
+            break;
+        }
+    }
+    return isDirty;
+};
+
+void NeoPixelMultiBus::Dirty()
+{
+    if (_count > 0)
+    {
+        // just set the first one, thats all thats needed
+        _buses[0]->Dirty();
+    }
+};
+
+void NeoPixelMultiBus::ResetDirty()
+{
+    for (uint8_t indexBus = 0; indexBus < _count; indexBus++)
+    {
+        _buses[indexBus]->ResetDirty();
+    }
+}

@@ -28,6 +28,7 @@ enum ColorType
 #include "RgbColor.h"
 #include "HslColor.h"
 #include "NeoPixelAnimator.h"
+#include "NeoPixelMultiBus.h"
 
 extern "C"
 {
@@ -139,13 +140,14 @@ private:
     void initMemory();
     void deinitMemory();
 
-    const uint16_t    _countPixels;       // Number of RGB LEDs in strip
-    const uint16_t    _sizePixels;      // Size of '_pixels' buffer below
+    uint32_t _endTime;       // Latch timing reference
+    uint16_t    _countPixels;       // Number of RGB LEDs in strip
+    uint16_t    _sizePixels;      // Size of '_pixels' buffer below
     
     uint8_t _flagsPixels;          // Pixel flags (400 vs 800 KHz, RGB vs GRB color)
     uint8_t _pin;           // Output pin number
     uint8_t* _pixels;        // Holds LED color values (3 bytes each)
-    uint32_t _endTime;       // Latch timing reference
+    
 
 #ifdef __AVR__
     const volatile uint8_t* _port;         // Output PORT register

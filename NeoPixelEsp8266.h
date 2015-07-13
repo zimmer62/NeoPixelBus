@@ -19,20 +19,20 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #pragma once
 
-struct PixelBusInfo
+typedef struct 
 {
-    Init(uint8_t* pixels, uint8_t* end, uint8_t pin)
-    {
-        _pixels = pixels;
-        _end = end;
-        _pinRegister = _BV(pin);
-    }
+    //void Init(uint8_t* pixels, uint8_t* end, uint8_t pin)
+    //{
+    //    _pixels = pixels;
+    //    _end = end;
+    //    _pinRegister = _BV(pin);
+    //}
 
     uint32_t _pinRegister;
     uint8_t* _pixels;
     uint8_t* _end;
-};
+} PixelBusInfo;
 
-void ICACHE_RAM_ATTR send_pixels_800(PixelBusInfo* buses, uint8_t countBuses);
+void ICACHE_RAM_ATTR send_pixels_800(uint8_t* pixels, uint8_t* end, uint8_t pin);
 void ICACHE_RAM_ATTR send_pixels_400(uint8_t* pixels, uint8_t* end, uint8_t pin);
 void ICACHE_RAM_ATTR send_multibus_pixels_800(PixelBusInfo* buses, uint8_t countBuses);

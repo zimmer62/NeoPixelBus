@@ -78,7 +78,7 @@ void NeoPixelBus::deinitMemory()
     }
 }
 
-void NeoPixelBus::Begin(uint16_t n, uint8_t p, uint8_t t = NEO_GRB | NEO_KHZ800)
+void NeoPixelBus::Begin(uint16_t n, uint8_t p, uint8_t t)
 {
     _countPixels = n;
     _sizePixels = (n * 3);
@@ -90,7 +90,7 @@ void NeoPixelBus::Begin(uint16_t n, uint8_t p, uint8_t t = NEO_GRB | NEO_KHZ800)
     Dirty();
 }
 
-void NeoPixelBus::Begin(void) 
+void NeoPixelBus::Begin() 
 {
     if (_pixels == NULL)
     {

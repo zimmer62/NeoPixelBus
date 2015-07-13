@@ -105,7 +105,7 @@ void ICACHE_RAM_ATTR send_pixels_400(uint8_t* pixels, uint8_t* end, uint8_t pin)
             uint32_t cyclesNext = cyclesStart;
 
             // after we have done as much work as needed for this next bit
-            // now wait for the HIGH
+            // now wait for the next HIGH
             do
             {
                 // cache and use this count so we don't incur another 
@@ -136,6 +136,7 @@ void ICACHE_RAM_ATTR send_multibus_pixels_800(PixelBusInfo* buses, uint8_t count
 {
     uint8_t mask;
     uint8_t* subpix[countBuses];
+    uint16_t pinRegisters[countBuses];
     bool isOne[countBuses];
     bool morePixels;
     uint32_t cyclesStart;
@@ -146,6 +147,7 @@ void ICACHE_RAM_ATTR send_multibus_pixels_800(PixelBusInfo* buses, uint8_t count
     for (uint8_t indexBus = 0; indexBus < countBuses; indexBus++)
     {
         subpix[indexBus] = buses[indexBus]._pixels;
+        pinRegisters[indexBus] = buses[indexBus]._pinRegister;
         pinRegistersAll |= buses[indexBus]._pinRegister;
     }
 
@@ -160,13 +162,14 @@ void ICACHE_RAM_ATTR send_multibus_pixels_800(PixelBusInfo* buses, uint8_t count
             pinRegisters0Bit = 0;
             for (uint8_t indexBus = 0; indexBus < countBuses; indexBus++)
             {
+                uint32_t pinRegister = pinRegisters[indexBus];
                 if (*(subpix[indexBus]) & mask)
                 {
-                    pinRegisters1Bit |= buses[indexBus]._pinRegister;
+                    pinRegisters1Bit |= pinRegister;
                 }
                 else
                 {
-                    pinRegisters0Bit |= buses[indexBus]._pinRegister;
+                    pinRegisters0Bit |= pinRegister;
                 }
             }
 
@@ -174,7 +177,7 @@ void ICACHE_RAM_ATTR send_multibus_pixels_800(PixelBusInfo* buses, uint8_t count
             uint32_t cyclesNext = cyclesStart;
 
             // after we have done as much work as needed for this next bit
-            // now wait for the HIGH
+            // now wait for the next HIGH
             do
             {
                 // cache and use this count so we don't incur another 
