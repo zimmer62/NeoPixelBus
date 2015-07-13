@@ -31,45 +31,76 @@ License along with NeoPixel.  If not, see
 
 #include "NeoPixelBus.h"
 
-#if defined(ESP8266)
-// due to linker overriding the ICACHE_RAM_ATTR for cpp files, these methods are
-// moved into a C file so the attribute will be applied correctly
-extern "C" void ICACHE_RAM_ATTR send_pixels_800(uint8_t* pixels, uint8_t* end, uint8_t pin);
-extern "C" void ICACHE_RAM_ATTR send_pixels_400(uint8_t* pixels, uint8_t* end, uint8_t pin);
-#endif
+NeoPixelBus::NeoPixelBus() :
+    _countPixels(0),
+    _sizePixels(0),
+    _pin(-1),
+    _flagsPixels(0),
+    _pixels(NULL)
+{
+}
 
 NeoPixelBus::NeoPixelBus(uint16_t n, uint8_t p, uint8_t t) : 
     _countPixels(n), 
     _sizePixels(n * 3), 
-    _pin(p), 
-    _flagsPixels(t)
+    _pin(-1), 
+    _flagsPixels(t),
+    _pixels(NULL)
 {
-    setPin(p);
+    SetPin(p);
 
+    initMemory();
+}
+
+
+NeoPixelBus::~NeoPixelBus() 
+{
+    deinitMemory();
+
+    pinMode(_pin, INPUT);
+}
+
+void NeoPixelBus::initMemory()
+{
     _pixels = (uint8_t *)malloc(_sizePixels);
-    if (_pixels) 
+    if (_pixels)
     {
         memset(_pixels, 0, _sizePixels);
     }
 }
 
-NeoPixelBus::~NeoPixelBus() 
+void NeoPixelBus::deinitMemory()
 {
-    if (_pixels) 
+    if (_pixels)
+    {
         free(_pixels);
-
-    pinMode(_pin, INPUT);
+        _pixels = NULL;
+    }
 }
 
-void NeoPixelBus::Begin(void) 
+void NeoPixelBus::Begin(uint16_t n, uint8_t p, uint8_t t = NEO_GRB | NEO_KHZ800)
 {
-    pinMode(_pin, OUTPUT);
-    digitalWrite(_pin, LOW);
+    _countPixels = n;
+    _sizePixels = (n * 3);
+    _flagsPixels = t;
+
+    deinitMemory();
+    initMemory();
 
     Dirty();
 }
 
-void NEOPIXEL_RAM_DECL NeoPixelBus::Show(void)
+void NeoPixelBus::Begin(void) 
+{
+    if (_pixels == NULL)
+    {
+        for (;;); // cause a WDT exception
+    }
+
+    Dirty();
+}
+
+void NeoPixelBus::Show(void)
 {
     if (!_pixels) 
         return;
@@ -970,7 +1001,7 @@ void NEOPIXEL_RAM_DECL NeoPixelBus::Show(void)
 
 
 // Set the output pin number
-void NeoPixelBus::setPin(uint8_t p) 
+void NeoPixelBus::SetPin(uint8_t p) 
 {
     pinMode(_pin, INPUT);
     _pin = p;
@@ -991,7 +1022,7 @@ void NeoPixelBus::SetPixelColor(
 {
     if (n < _countPixels) 
     {
-        UpdatePixelColor(n, r, g, b);
+        updatePixelColor(n, r, g, b);
     }
 }
 
@@ -999,12 +1030,12 @@ void NeoPixelBus::ClearTo(uint8_t r, uint8_t g, uint8_t b)
 {
     for (uint8_t n = 0; n < _countPixels; n++)
     {
-        UpdatePixelColor(n, r, g, b);
+        updatePixelColor(n, r, g, b);
     }
 }
 
 // Set pixel color from separate R,G,B components:
-void NeoPixelBus::UpdatePixelColor(
+void NeoPixelBus::updatePixelColor(
     uint16_t n, 
     uint8_t r, 
     uint8_t g, 

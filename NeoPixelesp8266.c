@@ -1,5 +1,5 @@
 /*
-NeoPixelEsp8266.h - NeoPixel library helper functions for Esp8266 using cycle count
+NeoPixelEsp8266.c - NeoPixel library helper functions for Esp8266 using cycle count
 Copyright (c) 2015 Michael C. Miller. All right reserved.
 
 This library is free software; you can redistribute it and/or
@@ -19,8 +19,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include <Arduino.h>
 #include <eagle_soc.h>
+#include "NeoPixelEsp8266.h"
 
 #if defined(ESP8266)
+
+// due to linker overriding the ICACHE_RAM_ATTR for cpp files, these methods are
+// moved into this C file so the attribute will be applied correctly
 
 inline uint32_t _getCycleCount()
 {
@@ -126,6 +130,95 @@ void ICACHE_RAM_ATTR send_pixels_400(uint8_t* pixels, uint8_t* end, uint8_t pin)
     // while accurate, this isn't needed due to the delays at the 
     // top of Show() to enforce between update timing
     // while ((_getCycleCount() - cyclesStart) < CYCLES_400);
+}
+
+void ICACHE_RAM_ATTR send_multibus_pixels_800(PixelBusInfo* buses, uint8_t countBuses)
+{
+    uint8_t mask;
+    uint8_t* subpix[countBuses];
+    bool isOne[countBuses];
+    bool morePixels;
+    uint32_t cyclesStart;
+    uint32_t pinRegistersAll = 0;
+    uint32_t pinRegisters1Bit;
+    uint32_t pinRegisters0Bit;
+
+    for (uint8_t indexBus = 0; indexBus < countBuses; indexBus++)
+    {
+        subpix[indexBus] = buses[indexBus]._pixels;
+        pinRegistersAll |= buses[indexBus]._pinRegister;
+    }
+
+    // trigger emediately
+    cyclesStart = _getCycleCount() - CYCLES_800;
+    do
+    {
+        for (mask = 0x80; mask != 0; mask >>= 1)
+        {
+            // determine which buses will be high or low
+            pinRegisters1Bit = 0;
+            pinRegisters0Bit = 0;
+            for (uint8_t indexBus = 0; indexBus < countBuses; indexBus++)
+            {
+                if (*(subpix[indexBus]) & mask)
+                {
+                    pinRegisters1Bit |= buses[indexBus]._pinRegister;
+                }
+                else
+                {
+                    pinRegisters0Bit |= buses[indexBus]._pinRegister;
+                }
+            }
+
+            // do the checks here while we are waiting on time to pass
+            uint32_t cyclesNext = cyclesStart;
+
+            // after we have done as much work as needed for this next bit
+            // now wait for the HIGH
+            do
+            {
+                // cache and use this count so we don't incur another 
+                // instruction before we turn the bit high
+                cyclesStart = _getCycleCount();
+            } while ((cyclesStart - cyclesNext) < CYCLES_800);
+
+            // set all high
+            GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pinRegistersAll);
+
+            // wait for the 0 bit LOW
+            do
+            {
+                cyclesNext = _getCycleCount();
+            } while ((cyclesNext - cyclesStart) < CYCLES_800_T0H);
+
+            // set all 0 bit buses to low
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pinRegisters0Bit);
+
+            // wait for the 1 bit LOW
+            do
+            {
+                cyclesNext = _getCycleCount();
+            } while ((cyclesNext - cyclesStart) < CYCLES_800_T1H);
+
+            // set all 1 bit buses to low
+            GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pinRegisters1Bit);
+        }
+
+        // next sub pixel
+        morePixels = false;
+        for (uint8_t indexBus = 0; indexBus < countBuses; indexBus++)
+        {
+            if (subpix[indexBus] < buses[indexBus]._end)
+            {
+                subpix[indexBus]++;
+                morePixels = true;
+            }
+        }
+    } while (morePixels);
+
+    // while accurate, this isn't needed due to the delays at the 
+    // top of Show() to enforce between update timing
+    // while ((_getCycleCount() - cyclesStart) < CYCLES_800);
 }
 
 #endif

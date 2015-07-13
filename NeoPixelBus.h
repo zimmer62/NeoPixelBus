@@ -25,26 +25,25 @@ enum ColorType
     ColorType_Hsl
 };
 
-#if defined(ESP8266)
-#define NEOPIXEL_RAM_DECL ICACHE_RAM_ATTR
-#else
-// All other supported platforms use the default memory location
-#define NEOPIXEL_RAM_DECL
-#endif
-
 #include "RgbColor.h"
 #include "HslColor.h"
 #include "NeoPixelAnimator.h"
 
-// '_flagsPixels' flags for LED _pixels (third parameter to constructor):
-#define NEO_RGB     0x00 // Wired for RGB data order
-#define NEO_GRB     0x01 // Wired for GRB data order
-#define NEO_BRG     0x04
-#define NEO_COLMASK 0x05
+extern "C"
+{
+#include "NeoPixelEsp8266.h"
+}
 
-#define NEO_KHZ400  0x00 // 400 KHz datastream
+// '_flagsPixels' flags for LED _pixels (third parameter to constructor):
+#define NEO_RGB     0x01 // Wired for RGB data order
+#define NEO_GRB     0x02 // Wired for GRB data order
+#define NEO_BRG     0x04
+#define NEO_COLMASK 0x07
+
+#define NEO_KHZ400  0x01 // 400 KHz datastream
 #define NEO_KHZ800  0x02 // 800 KHz datastream
-#define NEO_SPDMASK 0x02
+#define NEO_SPDMASK 0x03
+
 #define NEO_DIRTY   0x80 // a change was made it _pixels that requires a show
 
 // v1 NeoPixels aren't handled by default, include the following define before the 
@@ -55,6 +54,7 @@ class NeoPixelBus
 {
 public:
     // Constructor: number of LEDs, pin number, LED type
+    NeoPixelBus();
     NeoPixelBus(uint16_t n, uint8_t p, uint8_t t = NEO_GRB | NEO_KHZ800);
     ~NeoPixelBus();
 
@@ -63,13 +63,25 @@ public:
         return _countPixels;
     }
 
+    void SetPin(uint8_t p);
+
+    uint8_t Pin() const
+    {
+        return _pin;
+    }
+
+    void Begin(uint16_t n, uint8_t p, uint8_t t = NEO_GRB | NEO_KHZ800);
     void Begin();
-    void NEOPIXEL_RAM_DECL Show();
+
+    void Show();
+
     inline bool CanShow(void) const
     { 
         return (micros() - _endTime) >= 50L; 
     }
+
     void ClearTo(uint8_t r, uint8_t g, uint8_t b);
+
     void ClearTo(RgbColor c)
     {
         ClearTo(c.R, c.G, c.B);
@@ -79,10 +91,12 @@ public:
     {
         return  (_flagsPixels & NEO_DIRTY);
     };
+
     void Dirty()
     {
         _flagsPixels |= NEO_DIRTY;
     };
+
     void ResetDirty()
     {
         _flagsPixels &= ~NEO_DIRTY;
@@ -92,12 +106,19 @@ public:
     {
         return _pixels;
     };
+
     uint16_t PixelCount() const
     {
         return _countPixels;
     };
 
+    uint16_t PixelSize() const
+    {
+        return _sizePixels;
+    }
+
     void SetPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b);
+
     void SetPixelColor(uint16_t n, RgbColor c)
     {
         SetPixelColor(n, c.R, c.G, c.B);
@@ -108,12 +129,15 @@ public:
 private:
     friend NeoPixelAnimator;
 
-    void setPin(uint8_t p);
-    void UpdatePixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b);
-    void UpdatePixelColor(uint16_t n, RgbColor c)
+    
+    void updatePixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b);
+    void updatePixelColor(uint16_t n, RgbColor c)
     {
-        UpdatePixelColor(n, c.R, c.G, c.B);
+        updatePixelColor(n, c.R, c.G, c.B);
     };
+
+    void initMemory();
+    void deinitMemory();
 
     const uint16_t    _countPixels;       // Number of RGB LEDs in strip
     const uint16_t    _sizePixels;      // Size of '_pixels' buffer below
@@ -122,6 +146,7 @@ private:
     uint8_t _pin;           // Output pin number
     uint8_t* _pixels;        // Holds LED color values (3 bytes each)
     uint32_t _endTime;       // Latch timing reference
+
 #ifdef __AVR__
     const volatile uint8_t* _port;         // Output PORT register
     uint8_t _pinMask;       // Output PORT bitmask
