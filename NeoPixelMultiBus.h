@@ -48,5 +48,5 @@ private:
 
     NeoPixelBus** _buses;
     uint8_t _count;
-    uint8_t _size;
+    const uint8_t _size;
 };
