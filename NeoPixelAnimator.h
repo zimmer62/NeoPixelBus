@@ -21,7 +21,7 @@ License along with NeoPixel.  If not, see
 
 class NeoPixelBus;
 
-typedef std::function<void(float progress)> AnimUpdateCallback;
+typedef std::function<void(uint16_t n, float progress)> AnimUpdateCallback;
 
 class NeoPixelAnimator
 {
